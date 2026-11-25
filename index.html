@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Верфь — конструктор парусных кораблей</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="panel">
+        <header class="brand">
+          <h1>Верфь</h1>
+          <p>Конструктор low-poly парусников</p>
+        </header>
+        <div id="ui"></div>
+      </aside>
+
+      <main id="stage">
+        <canvas id="view"></canvas>
+
+        <div class="bar top">
+          <input id="ship-name" type="text" maxlength="40" spellcheck="false" aria-label="Название корабля" />
+          <span class="spacer"></span>
+          <button id="btn-png" type="button" class="btn">PNG-иконка</button>
+          <button id="btn-gltf" type="button" class="btn">glTF</button>
+          <button id="btn-glb" type="button" class="btn primary">Экспорт GLB</button>
+        </div>
+
+        <div class="bar bottom">
+          <label class="toggle"><input id="opt-water" type="checkbox" /><span>Вода</span></label>
+          <label class="toggle"><input id="opt-wire" type="checkbox" /><span>Сетка</span></label>
+          <label class="toggle"><input id="opt-rotate" type="checkbox" /><span>Вращение</span></label>
+          <button id="btn-fit" type="button" class="btn small">Показать целиком</button>
+          <span class="spacer"></span>
+          <span id="stats"></span>
+        </div>
+
+        <div id="toast" role="status"></div>
+        <input id="file-input" type="file" accept=".json,.glb,.gltf" hidden />
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
