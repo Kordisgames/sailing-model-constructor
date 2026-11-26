@@ -1,5 +1,6 @@
 import { BOW_TYPES, STERN_TYPES, HULL_FORMS, applyHullForm } from './builder/hull.js';
 import { RIG_TYPES, SAIL_CUTS, WING_STYLES } from './builder/rig.js';
+import { BACKDROPS } from './builder/backdrops.js';
 import { GUN_ROWS } from './builder/details.js';
 import {
   COLOR_SLOTS,
@@ -78,7 +79,8 @@ export function createUI(panel, app) {
     const input = el('input', { type: 'checkbox', checked: !!obj[key] });
     input.addEventListener('change', () => {
       obj[key] = input.checked;
-      app.changed();
+      opts.onChange?.(obj[key]);
+      if (!opts.skipRebuild) app.changed();
       if (opts.rerender) render();
     });
     return el('label', { class: 'toggle', title: opts.hint }, [input, el('span', { text: label })]);
@@ -494,7 +496,53 @@ export function createUI(panel, app) {
         render();
       },
     );
+    const view = app.getCameraView?.() ?? { azimuth: 0, elevation: 0, zoom: 1 };
+    const saved = o.savedView;
+    const fmt = (v) =>
+      v
+        ? `${(((v.azimuth % 360) + 360) % 360).toFixed(0)}° азимут · ${v.elevation.toFixed(0)}° высота · ×${(v.zoom ?? 1).toFixed(2)}`
+        : 'не задан';
     return [
+      group('Ракурс камеры', [
+        note(`Сейчас: ${fmt(view)}`),
+        saved ? note(`Запомнен: ${fmt(saved)}`) : note('Запомните ракурс, чтобы снимать разные корабли под одним углом.'),
+        el('div', { class: 'btn-row' }, [
+          el('button', {
+            type: 'button',
+            class: 'btn primary',
+            text: 'Запомнить ракурс',
+            onclick: () => {
+              app.rememberView();
+              render();
+            },
+          }),
+          el('button', {
+            type: 'button',
+            class: 'btn',
+            text: 'Применить',
+            disabled: !saved,
+            onclick: () => app.applySavedView(),
+          }),
+        ]),
+        el('div', { class: 'btn-row' }, [
+          el('button', {
+            type: 'button',
+            class: 'btn',
+            text: 'Сбросить запомненный',
+            disabled: !saved,
+            onclick: () => {
+              app.clearSavedView();
+              render();
+            },
+          }),
+        ]),
+        toggle('Держать ракурс при смене корабля', o, 'keepView', {
+          hint: 'При выборе заготовки или открытии JSON без своего ракурса — подставлять запомненный угол',
+          rerender: true,
+          skipRebuild: true,
+          onChange: () => app.saveSettings(),
+        }),
+      ]),
       group('3D-модель', [
         el('div', { class: 'row' }, [el('span', { class: 'lbl', text: 'Нулевая высота' }), originChips]),
         slider('Масштаб', o, 'scale', 0.01, 10, 0.01, {
@@ -505,18 +553,43 @@ export function createUI(panel, app) {
           el('button', { type: 'button', class: 'btn primary', text: 'Скачать GLB', onclick: () => app.exportModel(true) }),
           el('button', { type: 'button', class: 'btn', text: 'Скачать glTF', onclick: () => app.exportModel(false) }),
         ]),
-        note('Оси: нос смотрит в +Z, верх +Y. Меши объединены по материалам, нормали плоские (low poly).'),
+        note('Оси: нос +Z, верх +Y. В модель пишется JSON проекта и текущий ракурс камеры.'),
       ]),
-      group('Иконка', [
-        el('button', { type: 'button', class: 'btn wide', text: 'Сохранить PNG с прозрачным фоном', onclick: () => app.exportIcon() }),
-        note('Снимок текущего ракурса 1024×1024 — пригодится для иконки корабля в магазине.'),
-      ]),
-      group('Проект', [
+      group('Фон и PNG', [
+        el('div', { class: 'row' }, [
+          el('span', { class: 'lbl', text: 'Фон' }),
+          chips(BACKDROPS, o.backdrop || 'none', (id) => {
+            app.setBackdrop(id);
+            render();
+          }),
+        ]),
+        note(BACKDROPS[o.backdrop || 'none'].hint),
         el('div', { class: 'btn-row' }, [
-          el('button', { type: 'button', class: 'btn', text: 'Сохранить .json', onclick: () => app.saveProject() }),
+          el('button', {
+            type: 'button',
+            class: 'btn primary',
+            text: 'PNG с фоном',
+            disabled: (o.backdrop || 'none') === 'none',
+            title: (o.backdrop || 'none') === 'none' ? 'Сначала выберите фон выше' : undefined,
+            onclick: () => app.exportIcon({ transparent: false }),
+          }),
+          el('button', {
+            type: 'button',
+            class: 'btn',
+            text: 'PNG прозрачный',
+            onclick: () => app.exportIcon({ transparent: true }),
+          }),
+        ]),
+        note('Фон сразу виден во вьюпорте. Снимок 1024×1024 — с фоном или с прозрачностью, текущий ракурс.'),
+      ]),
+      group('Проект JSON', [
+        el('div', { class: 'btn-row' }, [
+          el('button', { type: 'button', class: 'btn primary', text: 'Скачать .json', onclick: () => app.saveProject() }),
           el('button', { type: 'button', class: 'btn', text: 'Открыть…', onclick: () => app.openProject() }),
         ]),
-        note('Открыть можно файл проекта .json или GLB/glTF, экспортированный отсюда: параметры корабля записываются внутрь модели.'),
+        note(
+          'JSON хранит все параметры корабля и ракурс. Можно снова открыть и править. Также открываются GLB/glTF, экспортированные отсюда.',
+        ),
       ]),
     ];
   }
